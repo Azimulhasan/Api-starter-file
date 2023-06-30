@@ -1,41 +1,33 @@
 const express = require("express");
-const fs = require("fs");
+const morgan = require("morgan");
 
 const app = express();
+
 app.use(express.json())
-const port =  5002;
 
+if(process.env.NODE_ENV === "development"){
+    app.use(morgan("dev"))
+}
 
-// app.get('/',(req,res)=>{
-//     res.status(200).send("Working ig")
-// })
+const nftsRouter = require('./routes/nftsRoute')
+const usersRouter = require('./routes/usersRoute')
 
+// Serving Template Demo
+app.use(express.static(`${__dirname}/nft-data/img`))
 
-const nfts = JSON.parse(fs.readFileSync(`${__dirname}/nft-data/data/nft-simple.json`)) 
-
-
-app.get('/api/v1/nfts',(req,res)=>{
-    res.status(200).json({
-        "status":"success",
-        "results":nfts.length,
-        "data":{
-           nfts,
-        }
-    })
+// CUStom Middleware
+app.use((req, res, next) => {
+    console.log("Ok")
+    next()
 })
 
-app.post("/api/v1/nfts",(req,res)=>{
-    const newId = nfts[nfts.length - 1].id +1;
-    const newNFTs = Object.assign({id:newId},req.body)
-    nfts.push(newNFTs)
-    fs.writeFile(`${__dirname}/nft-data/data/nft-simple.json`, JSON.stringify(nfts), (err)=>{
-        res.status(201).json({
-            status:"success",
-            nfts: newNFTs,
-        })
-    })
+app.use((req, res, next) => {
+    req.requestTime = new Date().toISOString();
+    next()
 })
 
-app.listen(port, ()=>{
-    console.log(`App running on port ${port} ...`)
-})
+// middleware for routing
+app.use('/api/v1/nfts', nftsRouter)
+app.use('/api/v1/users', usersRouter)
+
+module.exports = app;
