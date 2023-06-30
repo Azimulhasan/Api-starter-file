@@ -27,6 +27,18 @@ mongoose.connect(
 
 
 
+// const testNFT = new NFT({
+//     name: "Blue World",
+//     rating: 3.2,
+//     price: 32
+// })
+
+// testNFT.save().then((docNFT)=>{
+//     console.log(docNFT)
+// }).catch(error=>{
+//     console.log(error)
+// })
+
 const port =  process.env.PORT || 3000;
 app.listen(port, ()=>{
     console.log(`App running on port ${port} ...`)
