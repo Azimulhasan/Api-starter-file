@@ -16,7 +16,6 @@ mongoose.connect(
         useNewUrlParser:true
     }
 ).then((con)=>{
-    console.log(con.connection)
     console.log("DB connection was successful ")
 })
 

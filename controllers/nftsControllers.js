@@ -5,19 +5,19 @@ const NFT = require("./../models/nftModel")
 
 
 
-exports.checkIDs = (req, res, next , value) =>{
-    console.log("ID:",value)
-    const id = req.params.id * 1;
-    // if (id >= nfts.length) {
-    //     return res
-    //         .status(404)
-    //         .json({
-    //             status: "failed", 
-    //             message: "Invalid ID"
-    //         })
-    // }
-    next()
-}
+// exports.checkIDs = (req, res, next , value) =>{
+//     console.log("ID:",value)
+//     const id = req.params.id * 1;
+//     // if (id >= nfts.length) {
+//     //     return res
+//     //         .status(404)
+//     //         .json({
+//     //             status: "failed", 
+//     //             message: "Invalid ID"
+//     //         })
+//     // }
+//     next()
+// }
 
 // exports.checkBody = (req, res, next) =>{
 //     if(!req.body.name || !req.body.price){
@@ -33,7 +33,29 @@ exports.checkIDs = (req, res, next , value) =>{
 exports.getAllNFTs = async(req, res) => {
     try {
 
-        const nfts = await NFT.find()
+        // catching quary data
+        const queryObj = { ...req.query}
+        // excluding some fields
+        const excludedFlelds = ["page","limit","fields","sort"]
+        excludedFlelds.forEach((el)=> delete queryObj[el])
+        
+        // Adding to $ to [gte/gt/lte/lt]
+        let queryStr = JSON.stringify(queryObj)
+        queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`)
+
+        // query is loaded
+        let query = NFT.find(JSON.parse(queryStr))
+
+        // Sorting method
+        if(req.query.sort){
+            const sortBy = req.query.sort.split(',').join(' ')
+            query = query.sort(`{${sortBy}:'asc'}`)
+  
+        }
+        const promisedquery = query.exec()
+
+        const nfts = await promisedquery
+        console.log(nfts)
         res
             .status(200)
             .json({
