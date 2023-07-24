@@ -49,9 +49,28 @@ exports.getAllNFTs = async(req, res) => {
         // Sorting method
         if(req.query.sort){
             const sortBy = req.query.sort.split(',').join(' ')
-            query = query.sort(`{${sortBy}:'asc'}`)
+            query = query.sort(sortBy)
   
+        }else{
+            query = query.sort("-createdAt")
         }
+
+        //Field Limiting
+        if(req.query.fields){
+            const fields = req.query.fields.split(',').join(' ')+' -__v'
+            query = query.select(fields)
+        }else{
+            query = query.select('-__v')
+        }
+
+        //Pagination Functions
+        const page = req.query.page * 1 || 1; // defaults as 1 if page was not provided
+        const limit = req.query.limit * 1 || 10
+        const skip = (page - 1) * limit 
+
+        query = query.skip(skip).limit(limit)
+
+
         const promisedquery = query.exec()
 
         const nfts = await promisedquery
