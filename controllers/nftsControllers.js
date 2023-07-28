@@ -2,79 +2,24 @@
 // const nfts = JSON.parse(fs.readFileSync(`${__dirname}/../nft-data/data/nft-simple.json`))
 
 const NFT = require("./../models/nftModel")
+const APIFeatures = require('./../Utils/apiFeatures')
 
-
-
-// exports.checkIDs = (req, res, next , value) =>{
-//     console.log("ID:",value)
-//     const id = req.params.id * 1;
-//     // if (id >= nfts.length) {
-//     //     return res
-//     //         .status(404)
-//     //         .json({
-//     //             status: "failed", 
-//     //             message: "Invalid ID"
-//     //         })
-//     // }
-//     next()
-// }
-
-// exports.checkBody = (req, res, next) =>{
-//     if(!req.body.name || !req.body.price){
-//         return res.status(400).json({
-//             status: "failed",
-//             message: "Missing name and price"
-//         })
-//     }
-//     next()
-// }
-
+//GET- ALL TOP NFTs 
+exports.aliasTopNFTs = async(req, res, next) => {
+    req.query.limit = '5'
+    req.query.sort = '-ratingAverage,price'
+    req.query.fields = "name,price,ratingAverage,difficulty"
+    next()
+}
 // GET NFTs
 exports.getAllNFTs = async(req, res) => {
     try {
 
-        // catching quary data
-        const queryObj = { ...req.query}
-        // excluding some fields
-        const excludedFlelds = ["page","limit","fields","sort"]
-        excludedFlelds.forEach((el)=> delete queryObj[el])
-        
-        // Adding to $ to [gte/gt/lte/lt]
-        let queryStr = JSON.stringify(queryObj)
-        queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`)
-
-        // query is loaded
-        let query = NFT.find(JSON.parse(queryStr))
-
-        // Sorting method
-        if(req.query.sort){
-            const sortBy = req.query.sort.split(',').join(' ')
-            query = query.sort(sortBy)
-  
-        }else{
-            query = query.sort("-createdAt")
-        }
-
-        //Field Limiting
-        if(req.query.fields){
-            const fields = req.query.fields.split(',').join(' ')+' -__v'
-            query = query.select(fields)
-        }else{
-            query = query.select('-__v')
-        }
-
-        //Pagination Functions
-        const page = req.query.page * 1 || 1; // defaults as 1 if page was not provided
-        const limit = req.query.limit * 1 || 10
-        const skip = (page - 1) * limit 
-
-        query = query.skip(skip).limit(limit)
-
-
-        const promisedquery = query.exec()
+        const features = new APIFeatures(NFT.find(), req.query).filter().sort().limitFields().pagination()
+        const promisedquery = features.query.exec()
 
         const nfts = await promisedquery
-        console.log(nfts)
+
         res
             .status(200)
             .json({
@@ -171,6 +116,94 @@ exports.deleteNFT = async(req, res) => {
     } catch (error) {
         res.status(404).json({
             status:"failed",
+            message: error
+        })
+    }
+}
+
+// Aggregation Pipeline
+exports.getNFTsStats = async(req,res) =>{
+    try {
+        const stats =   await NFT.aggregate([
+            {
+                $match: {ratingsAverage:{$gte: 4.5}}
+            },
+            {
+                $group: {
+                    _id:"$ratingsAverage",
+                    num: {$sum: 1},
+                    numRating: {$sum :"$ratingsQuantity"},
+                    avgRating: {$avg: "$ratingsAverage"},
+                    avgPrice: {$avg: '$price'},
+                    minPrice: {$min: '$price'},
+                    maxPrice: {$max: '$price'}
+                },
+            },
+           
+        ])
+        res.status(200).json({
+            status:"success",
+            data:{
+                stats
+            }
+        })
+    } catch (error) {
+        res.status(404).json({
+            status:'failed',
+            message: error
+        })
+    }
+}
+
+// Calculating the number of NFTs created in a month
+exports.getMonthlyPlan = async( req, res) =>{
+    try {
+        const year = req.params.year *1;
+        const plan  = await NFT.aggregate([
+            {
+                $unwind:"$startDates"
+            },
+            {
+                $match:{
+                    startDates:{
+                        $gte: new Date(`${year}-01-01`),
+                        $lte: new Date(`${year}-12-31`)
+                    }
+                }
+            },
+            {
+                $group:{
+                    _id: {$month: "$startDates"},
+                    numNFTStarts: {$sum: 1},
+                    nfts: { $push :"$name"}
+                }
+            },
+            {
+                $addFields: {
+                    month : "$_id",
+                }
+            },
+            {
+                $project:{
+                    _id: 0
+                }
+            },
+            {
+                $sort: {numNFTStarts: -1}
+            },
+            {
+                $limit: 12
+            }
+        ])
+        res.status(200).json({
+            status:"success",
+            data:{
+                plan
+            }
+        })
+    } catch (error) {
+        res.status(404).json({
+            status:'failed',
             message: error
         })
     }

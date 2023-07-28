@@ -11,7 +11,7 @@ const DB = process.env.DATABASE.replace("<PASSWORD>",process.env.DATABASE_PASSWO
 //Mangoose connection 
 mongoose.connect(
     DB,{
-        useCreateIndex: true,
+        useCreateIndex: true ,
         useFindAndModify: false,
         useNewUrlParser:true
     }
