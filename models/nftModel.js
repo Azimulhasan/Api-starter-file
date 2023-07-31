@@ -1,4 +1,5 @@
 const mongoose = require("mongoose")
+const slugify = require('slugify')
 
 
 const nftSchema = new mongoose.Schema({
@@ -8,6 +9,7 @@ const nftSchema = new mongoose.Schema({
         unique: true,
         trim: true,  
     },
+    slug: String,
     duration:{
         type: String,
         required: [true , "Must provide a duration"]
@@ -65,6 +67,14 @@ const nftSchema = new mongoose.Schema({
 
 nftSchema.virtual("durationWeeks").get(function(){
     return this.duration / 7
+})
+
+// Mongoose Middleware
+//Document Middleware: runs before .save() and .create()
+nftSchema.pre("save",function(next){
+    //console.log(this)
+    this.slug = slugify(this.name, {lower: true})
+    next()
 })
 
 const NFT = mongoose.model("NFT", nftSchema)
