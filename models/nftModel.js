@@ -1,5 +1,6 @@
 const mongoose = require("mongoose")
 const slugify = require('slugify')
+// const validator = require('validator')
 
 
 const nftSchema = new mongoose.Schema({
@@ -8,6 +9,9 @@ const nftSchema = new mongoose.Schema({
         required: [true, "An NFT must have a name"],
         unique: true,
         trim: true,  
+        maxlength: [40, "Nft name should not exceed 40 charectors"],
+        minlength: [5, "Nft name must have atleast 5 charectors"],
+        // validate: [validator.isAlpha, 'NFT must only contain charectors']
     },
     slug: String,
     duration:{
@@ -20,11 +24,17 @@ const nftSchema = new mongoose.Schema({
     },
     difficulty: {
         type: String,
-        required: [true, "Must have a difficulty"]
+        required: [true, "Must have a difficulty"],
+        enum: {
+            values: ["easy", "medium", "difficult"],
+            message: "Difficulty can be either: Easy, Medium, Difficult"
+        }
     },
     ratingsAverage: {
         type: Number,
-        default: 4.5
+        default: 4.5,
+        min: [1, "Must have more than 1"],
+        max: [5, "Must have less than or equal to 5"],
     },
     ratingsQuantity:{
         type: Number,
@@ -34,7 +44,16 @@ const nftSchema = new mongoose.Schema({
         type: Number,
         required: [true, "An NFT must have a price"]
     },
-    priceDiscount: Number,
+    priceDiscount: {
+        type: Number,
+        validate: {
+            // This will only work at the time of creating and not updating
+            validator: function(val){
+                return val < this.price
+            },
+            message: "Discount price ({VALUE}) should be below regular price"
+        }
+    },
     summary: {
         type: String,
         trim: true,
@@ -55,6 +74,10 @@ const nftSchema = new mongoose.Schema({
         select: false
     },
     startDates: [Date],
+    secretNFTs: {
+        type: Boolean,
+        default: false,
+    },
 },
 {
     toJSON : {
@@ -76,6 +99,48 @@ nftSchema.pre("save",function(next){
     this.slug = slugify(this.name, {lower: true})
     next()
 })
+
+// Query Middleware
+
+// ------ pre 
+// nftSchema.pre("find",function(next){
+nftSchema.pre(/^find/,function(next){
+    this.find({
+        secretNFTs: {
+            $ne : true
+        }
+    })
+
+    
+    next()
+})
+
+// nftSchema.pre("findOne",function(next){
+//     this.find({
+//         secretNFTs: {
+//             $ne : true
+//         }
+//     })
+//     next()
+// })
+
+// -----post
+// nftSchema.post(/^find/,function(doc,next){
+//     console.log(doc)
+//     next()
+// })
+
+
+/// AGGREGATE MiddleWare
+
+// nftSchema.pre("aggregate", function(next){
+//     this.pipeline().unshift({
+//         $match: {
+//             secretNFTs: { $ne : true}
+//         }
+//     })
+//     next()
+// })
 
 const NFT = mongoose.model("NFT", nftSchema)
 
