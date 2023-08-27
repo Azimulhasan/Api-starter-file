@@ -1,11 +1,14 @@
 const app = require("./index")
-
 const dotenv = require('dotenv')
-dotenv.config({path: "./config.env"})
-
 const mongoose = require("mongoose")
 
+process.on('uncaughtException', (err)=>{
+    console.log(err.name, err.message)
+    console.log('UncaughtException shutting down the applications')
+    process.exit(1)
+})
 
+dotenv.config({path: "./config.env"})
 const DB = process.env.DATABASE.replace("<PASSWORD>",process.env.DATABASE_PASSWORD)
 
 //Mangoose connection 
@@ -42,6 +45,17 @@ mongoose.connect(
 console.log(process.env.NODE_ENV)
 
 const port =  process.env.PORT || 3000;
-app.listen(port, ()=>{
+const server = app.listen(port, ()=>{
     console.log(`App running on port ${port} ...`)
 }) 
+
+
+process.on("unhandledRejection", (err)=>{
+    console.log(err.name, err.message)
+    console.log('UnhandledError shutting down the applications')
+    server.close()
+    process.exit(1)
+
+})
+
+
