@@ -1,15 +1,50 @@
 const express = require("express");
 const morgan = require("morgan");
-
+const { rateLimit } = require('express-rate-limit')
+const helmet = require("helmet")
+const mongoSanitize = require("express-mongo-sanitize")
+const xss = require('xss-clean')
+const hpp = require('hpp')
 
 
 const app = express();
 
-app.use(express.json())
+// DATA Size LImiting and parsing incoming JSON requests and puting the parsed data in req.body.
+app.use(express.json({limit: "10kb"}))
 
-if(process.env.NODE_ENV === "development"){
+
+
+// DATA Sanitization against NoSQL query injections
+app.use(mongoSanitize())
+
+
+// DATA Sanitization against Cross Site Scripting (XSS)
+app.use(xss())
+
+// Prevent Parameter Pollution
+app.use(hpp({
+    whitelist: ["duration","difficulty","maxGroupSize","price","ratingsAverage","ratingsQuantity"]
+}))
+
+
+// SET PROPERITES In HEADER - SECURE THE HEADER
+app.use(helmet())
+
+const limiter = rateLimit({
+    max: 400,
+    windowMs: 60 * 60 * 1000,
+    message: "Too many request from this IP address, please try again in an hour",
+})
+
+
+// RATE LIMIT
+app.use('/api',limiter)
+
+// GLOBAL MIDDLEWARES
+
+// if(process.env.NODE_ENV == "development"){
     app.use(morgan("dev"))
-}
+// }
 
 
 const AppError = require('./Utils/appError')

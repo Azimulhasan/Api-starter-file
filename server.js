@@ -2,6 +2,8 @@ const app = require("./index")
 const dotenv = require('dotenv')
 const mongoose = require("mongoose")
 
+
+
 process.on('uncaughtException', (err)=>{
     console.log(err.name, err.message)
     console.log('UncaughtException shutting down the applications')
@@ -42,7 +44,7 @@ mongoose.connect(
 // })
 
 
-console.log(process.env.NODE_ENV)
+
 
 const port =  process.env.PORT || 3000;
 const server = app.listen(port, ()=>{
@@ -51,7 +53,7 @@ const server = app.listen(port, ()=>{
 
 
 process.on("unhandledRejection", (err)=>{
-    console.log(err.name, err.message)
+    console.log(err.name, err.message, err.stack)
     console.log('UnhandledError shutting down the applications')
     server.close()
     process.exit(1)

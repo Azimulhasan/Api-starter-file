@@ -16,7 +16,7 @@ const sendErrorPro = (err,res)=>{
         })
     } else{
         res.status(500).json({
-            status: "error",
+            status: "Error",
             message: "Something went wrong"
         })
     }
@@ -36,11 +36,17 @@ const handleValidationError = (err)=>{
     const message = `Invalid in Data. ${errors.join(". ")}`
     return new AppError(message,400)
 }
+const handleJWTError = (err)=>{
+    return new AppError(`Invalid Token, Please log in again - ${err.message}`, 401)
+}
+const handleJWTExpiredError = (err)=>{
+    return new AppError(`Your Session got expired, Please Log In again - ${err.message}`, 401)
+}
 
 module.exports = (err, req, res, next)=>{
     
     err.statusCode = err.statusCode || 500;
-    err.status = err.status || "error"
+    err.status = err.status || "Error"
 
     if(process.env.NODE_ENV === 'development'){
         sendErrorDev(err,res)
@@ -55,11 +61,15 @@ module.exports = (err, req, res, next)=>{
         }else if(copyErr.name === 'ValidationError'){
             copyErr = handleValidationError(copyErr)
             sendErrorPro(copyErr,res)
+        }else if(copyErr.name === 'JsonWebTokenError'){
+            copyErr = handleJWTError(copyErr)
+            sendErrorPro(copyErr,res)
+        }else if(copyErr.name === 'TokenExpiredError'){
+            copyErr = handleJWTExpiredError(copyErr)
+            sendErrorPro(copyErr,res)
         }else{
             sendErrorPro(err,res)
         }
-        ValidationError
-        
     }
 
     next()
